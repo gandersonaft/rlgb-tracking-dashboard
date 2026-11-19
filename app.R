@@ -22,6 +22,7 @@ latest <- d$power |> group_by(station) |> slice_max(hour_utc, n = 1, with_ties =
 
 ui <- page_navbar(
   title = "RLGB radio tracking", theme = bs_theme(version = 5, preset = "flatly"),
+  header = tags$head(tags$meta(name = "robots", content = "noindex, nofollow, noarchive")),
   nav_panel("Fish",
     layout_columns(fill = FALSE,
       value_box("Heard at a station", paste0(sum(fish$status == "Heard at a station"), " of ", nrow(fish)), theme = "success"),
