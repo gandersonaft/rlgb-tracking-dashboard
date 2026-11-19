@@ -49,8 +49,8 @@
       }
     },
     "DT": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Type": "Package",
         "Package": "DT",
@@ -670,8 +670,8 @@
       }
     },
     "dplyr": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Type": "Package",
         "Package": "dplyr",
@@ -941,8 +941,8 @@
       }
     },
     "ggplot2": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Package": "ggplot2",
         "Title": "Create Elegant Data Visualisations Using the Grammar of Graphics",
@@ -1495,8 +1495,8 @@
       }
     },
     "leaflet": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Type": "Package",
         "Package": "leaflet",
@@ -1836,8 +1836,8 @@
       }
     },
     "plotly": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Package": "plotly",
         "Title": "Create Interactive Web Graphics via 'plotly.js'",
@@ -2299,8 +2299,8 @@
       }
     },
     "shiny": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Type": "Package",
         "Package": "shiny",
@@ -2582,8 +2582,8 @@
       }
     },
     "tidyr": {
-      "Source": "any",
-      "Repository": "RSPM",
+      "Source": "RSPM",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
       "description": {
         "Package": "tidyr",
         "Title": "Tidy Messy Data",
@@ -3003,7 +3003,7 @@
       "checksum": "e3ed3665cfcaa959130ed37c05e3c367"
     },
     "data/rlgb.rds": {
-      "checksum": "46a1a65a58f4126be9108994a607c798"
+      "checksum": "c8d1d96da400db7441576c48274040bb"
     }
   },
   "users": null
