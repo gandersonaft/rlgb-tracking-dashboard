@@ -2,18 +2,23 @@
 library(shiny); library(bslib); library(dplyr); library(ggplot2); library(plotly); library(DT); library(tidyr); library(leaflet)
 
 d <- readRDS("data/rlgb.rds")
-stn_cols <- c("RLGB-1" = "#1b9e77", "RLGB-2" = "#d95f02", "RLGB-3" = "#7570b3")
+stn_cols <- c("RLGB-1" = "#1b9e77", "RLGB-2" = "#d95f02", "RLGB-3" = "#7570b3", "Mobile" = "#e7298a")
+if (is.null(d$mtrack)) d$mtrack <- tibble(session = character(), t = as.POSIXct(character()), lat = numeric(), lon = numeric())
+if (!"lat" %in% names(d$events)) d$events <- d$events |> mutate(lat = NA_real_, lon = NA_real_)
+st_levels <- c("Heard at a station", "Mobile only", "Handheld only", "Never heard")
 
 fish <- d$rel |>
   mutate(fish = sprintf("T%02d", tag)) |>
   left_join(d$events |> group_by(tag) |>
               summarise(events = n(), bursts = sum(bursts_decoded), first_seen = min(start_utc), last_seen = max(start_utc),
-                        stations = paste(sort(unique(station)), collapse = ", "), best_db = max(sig_max_db, na.rm = TRUE)),
+                        stations = paste(sort(unique(station)), collapse = ", "), best_db = max(sig_max_db, na.rm = TRUE),
+                        at_station = any(station != "Mobile")),
             by = "tag") |>
-  mutate(status = case_when(!is.na(events) ~ "Heard at a station",
+  mutate(status = case_when(at_station %in% TRUE ~ "Heard at a station",
+                            !is.na(events) ~ "Mobile only",
                             handheld ~ "Handheld only",
                             TRUE ~ "Never heard"),
-         status = factor(status, c("Heard at a station", "Handheld only", "Never heard"))) |>
+         status = factor(status, st_levels)) |>
   arrange(tag)
 
 ev_days <- range(as.Date(d$events$start_utc))
@@ -26,6 +31,7 @@ ui <- page_navbar(
   nav_panel("Fish",
     layout_columns(fill = FALSE,
       value_box("Heard at a station", paste0(sum(fish$status == "Heard at a station"), " of ", nrow(fish)), theme = "success"),
+      value_box("Mobile receiver only", sum(fish$status == "Mobile only"), theme = "info"),
       value_box("Handheld only", sum(fish$status == "Handheld only"), theme = "warning"),
       value_box("Never heard", sum(fish$status == "Never heard"), theme = "secondary"),
       value_box("Latest decoded day (UTC)", d$last_day)),
@@ -45,14 +51,16 @@ ui <- page_navbar(
         sliderInput("days", "Dates (UTC)", min = ev_days[1], max = max(ev_days), value = range(ev_days), timeFormat = "%d %b", step = 1, animate = TRUE),
         selectInput("fish_sel", "Fish", c("All fish" = "all", setNames(as.character(fish$tag), fish$fish))),
         helpText("Fish are shown at the receiver that heard them; a receiver hears fish within roughly 100 m to a few hundred metres. ",
-                 "With one fish selected, the line joins the release site to each receiver in time order. Handheld records are not mapped.")),
+                 "Pink dots: fish heard by the mobile receiver, placed where the receiver was at the strongest burst (the fish is within a few hundred metres of it). ",
+                 "Thin pink lines: mobile survey routes. ",
+                 "With one fish selected, the line joins the release site to each detection in time order. Handheld records are not mapped.")),
       leafletOutput("map", height = 560),
       card(card_header("Detections in the selected dates"), DTOutput("map_tbl")))),
   nav_panel("Data",
     card(card_header("Station reports"), DTOutput("status_tbl")),
     card(card_header("Receiver activity: pulses per day"), plotlyOutput("pulses", height = 300)),
     p(class = "text-muted small", paste("Built", d$built_utc, "from the nightly decoder packages in the private repo. Only decoder-confirmed events",
-      "after each fish's release are shown; handheld records come from the release log. Bench beacons (T21-T23) are excluded."))))
+      "after each fish's release are shown; mobile receiver events need 3 or more confirmed bursts; handheld records come from the release log. Bench beacons (T21-T23) are excluded."))))
 
 server <- function(input, output, session) {
   output$fish_tbl <- renderDT({
@@ -60,8 +68,7 @@ server <- function(input, output, session) {
                            `First heard` = format(first_seen, "%d %b %H:%M"), `Last heard` = format(last_seen, "%d %b %H:%M"),
                            Station = stations, Events = events, Bursts = bursts, `Best dB` = round(best_db, 1))
     datatable(t, rownames = FALSE, options = list(pageLength = 20, dom = "t")) |>
-      formatStyle("Status", backgroundColor = styleEqual(c("Heard at a station", "Handheld only", "Never heard"),
-                                                         c("#d4edda", "#fff3cd", "#e9ecef")))
+      formatStyle("Status", backgroundColor = styleEqual(st_levels, c("#d4edda", "#d1ecf1", "#fff3cd", "#e9ecef")))
   })
   output$timeline <- renderPlotly({
     e <- d$events |> mutate(fish = factor(sprintf("T%02d", tag), sprintf("T%02d", 20:1)))
@@ -96,7 +103,7 @@ server <- function(input, output, session) {
   observe({
     req(input$map_zoom)   # wait until the map has been drawn (it is on a hidden tab at first)
     e <- ev_sel()
-    per <- e |> group_by(station, fish) |> summarise(b = sum(bursts_decoded), f = min(start_utc), l = max(start_utc), .groups = "drop") |>
+    per <- e |> filter(station != "Mobile") |> group_by(station, fish) |> summarise(b = sum(bursts_decoded), f = min(start_utc), l = max(start_utc), .groups = "drop") |>
       mutate(line = sprintf("%s: %s bursts, %s to %s", fish, format(b, big.mark = ","), format(f, "%d %b"), format(l, "%d %b")))
     st <- d$stations |> left_join(per |> group_by(station) |> summarise(n_fish = n(), txt = paste(line, collapse = "<br>")), by = "station") |>
       mutate(n_fish = coalesce(n_fish, 0L), txt = ifelse(is.na(txt), "No fish in these dates", txt))
@@ -108,9 +115,22 @@ server <- function(input, output, session) {
       addCircleMarkers(data = st, lng = ~lon, lat = ~lat, radius = ~8 + 4 * sqrt(n_fish), color = ~unname(stn_cols[station]), fillOpacity = .6, weight = 3,
                        popup = ~paste0("<b>", station, "</b><br>", n_fish, " fish<br>", txt), label = ~paste0(station, ": ", n_fish, " fish"),
                        labelOptions = labelOptions(noHide = TRUE, direction = "right", offset = c(12, 0)))
+    rt <- d$mtrack |> filter(as.Date(t) >= input$days[1], as.Date(t) <= input$days[2])
+    for (s in unique(rt$session)) {
+      r <- rt[rt$session == s, ]
+      m <- m |> addPolylines(lng = r$lon, lat = r$lat, color = "#e7298a", weight = 2, opacity = .5,
+                             label = paste("Mobile route", format(min(r$t), "%d %b %H:%M"), "to", format(max(r$t), "%H:%M")))
+    }
+    mob <- e |> filter(station == "Mobile", !is.na(lat))
+    if (nrow(mob)) m <- m |> addCircleMarkers(data = mob, lng = ~lon, lat = ~lat, radius = 7, color = "#e7298a", fillOpacity = .8, weight = 2,
+                       popup = ~sprintf("<b>%s</b> heard on the mobile receiver<br>%s to %s<br>%d bursts, best %.1f dB",
+                                        fish, format(start_utc, "%d %b %H:%M"), format(end_utc, "%H:%M"), as.integer(bursts_decoded), sig_max_db),
+                       label = ~paste(fish, "(mobile)"))
     if (input$fish_sel != "all" && nrow(e) > 0) {
       r1 <- d$rel |> filter(tag == as.integer(input$fish_sel))
-      path <- e |> arrange(start_utc) |> inner_join(d$stations, by = "station") |> filter(station != lag(station, default = "")) |> select(lon, lat)
+      path <- e |> arrange(start_utc) |> left_join(rename(d$stations, slat = lat, slon = lon), by = "station") |>
+        mutate(lat = coalesce(lat, slat), lon = coalesce(lon, slon)) |> filter(!is.na(lat)) |>
+        filter(station == "Mobile" | station != lag(station, default = "")) |> select(lon, lat)
       if (nrow(r1) && !is.na(r1$release_lat)) path <- bind_rows(tibble(lon = r1$release_lon, lat = r1$release_lat), path)
       if (nrow(path) > 1) m <- m |> addPolylines(lng = path$lon, lat = path$lat, color = "#c0392b", weight = 3, dashArray = "6")
     }
