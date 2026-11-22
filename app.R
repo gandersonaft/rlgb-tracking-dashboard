@@ -5,7 +5,7 @@ d <- readRDS("data/rlgb.rds")
 stn_cols <- c("RLGB-1" = "#1b9e77", "RLGB-2" = "#d95f02", "RLGB-3" = "#7570b3", "Mobile" = "#e7298a")
 if (is.null(d$mtrack)) d$mtrack <- tibble(session = character(), t = as.POSIXct(character()), lat = numeric(), lon = numeric())
 if (!"lat" %in% names(d$events)) d$events <- d$events |> mutate(lat = NA_real_, lon = NA_real_)
-st_levels <- c("Heard at a station", "Mobile only", "Handheld only", "Never heard")
+st_levels <- c("Heard at a station", "Mobile only", "Never heard")
 
 fish <- d$rel |>
   mutate(fish = sprintf("T%02d", tag)) |>
@@ -15,8 +15,7 @@ fish <- d$rel |>
                         at_station = any(station != "Mobile")),
             by = "tag") |>
   mutate(status = case_when(at_station %in% TRUE ~ "Heard at a station",
-                            !is.na(events) ~ "Mobile only",
-                            handheld ~ "Handheld only",
+                            !is.na(events) | handheld ~ "Mobile only",   # mobile receiver, incl. early handheld records in the release log
                             TRUE ~ "Never heard"),
          status = factor(status, st_levels)) |>
   arrange(tag)
@@ -32,7 +31,6 @@ ui <- page_navbar(
     layout_columns(fill = FALSE,
       value_box("Heard at a station", paste0(sum(fish$status == "Heard at a station"), " of ", nrow(fish)), theme = "success"),
       value_box("Mobile receiver only", sum(fish$status == "Mobile only"), theme = "info"),
-      value_box("Handheld only", sum(fish$status == "Handheld only"), theme = "warning"),
       value_box("Never heard", sum(fish$status == "Never heard"), theme = "secondary"),
       value_box("Latest decoded day (UTC)", d$last_day)),
     card(card_header("Every fish"), DTOutput("fish_tbl")),
@@ -53,22 +51,22 @@ ui <- page_navbar(
         helpText("Fish are shown at the receiver that heard them; a receiver hears fish within roughly 100 m to a few hundred metres. ",
                  "Pink dots: fish heard by the mobile receiver, placed where the receiver was at the strongest burst (the fish is within a few hundred metres of it). ",
                  "Thin pink lines: mobile survey routes. ",
-                 "With one fish selected, the line joins the release site to each detection in time order. Handheld records are not mapped.")),
+                 "With one fish selected, the line joins the release site to each detection in time order. Early mobile records from before 18 Nov (release log) have no map position.")),
       leafletOutput("map", height = 560),
       card(card_header("Detections in the selected dates"), DTOutput("map_tbl")))),
   nav_panel("Data",
     card(card_header("Station reports"), DTOutput("status_tbl")),
     card(card_header("Receiver activity: pulses per day"), plotlyOutput("pulses", height = 300)),
     p(class = "text-muted small", paste("Built", d$built_utc, "from the nightly decoder packages in the private repo. Only decoder-confirmed events",
-      "after each fish's release are shown; mobile receiver events need 3 or more confirmed bursts; handheld records come from the release log. Bench beacons (T21-T23) are excluded."))))
+      "after each fish's release are shown; mobile receiver events need 3 or more confirmed bursts; mobile records from before 18 Nov come from the release log. Bench beacons (T21-T23) are excluded."))))
 
 server <- function(input, output, session) {
   output$fish_tbl <- renderDT({
     t <- fish |> transmute(Fish = fish, Released = release_date_utc, Reach = release_reach, Status = status,
                            `First heard` = format(first_seen, "%d %b %H:%M"), `Last heard` = format(last_seen, "%d %b %H:%M"),
-                           Station = stations, Events = events, Bursts = bursts, `Best dB` = round(best_db, 1))
+                           Station = coalesce(stations, ifelse(handheld, "Mobile (release log)", NA)), Events = events, Bursts = bursts, `Best dB` = round(best_db, 1))
     datatable(t, rownames = FALSE, options = list(pageLength = 20, dom = "t")) |>
-      formatStyle("Status", backgroundColor = styleEqual(st_levels, c("#d4edda", "#d1ecf1", "#fff3cd", "#e9ecef")))
+      formatStyle("Status", backgroundColor = styleEqual(st_levels, c("#d4edda", "#d1ecf1", "#e9ecef")))
   })
   output$timeline <- renderPlotly({
     e <- d$events |> mutate(fish = factor(sprintf("T%02d", tag), sprintf("T%02d", 20:1)))
