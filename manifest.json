@@ -575,7 +575,7 @@
         "Package": "curl",
         "Type": "Package",
         "Title": "A Modern and Flexible Web Client for R",
-        "Version": "8.1.0",
+        "Version": "8.2.0",
         "Authors@R": "c(\n    person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"), email = \"jeroenooms@gmail.com\",\n      comment = c(ORCID = \"0000-0002-4035-0289\")),\n    person(\"Hadley\", \"Wickham\", role = \"ctb\"),\n    person(\"Posit Software, PBC\", role = \"cph\"))",
         "Description": "Bindings to 'libcurl' <https://curl.se/libcurl/> for performing fully\n    configurable HTTP/FTP requests where responses can be processed in memory, on\n    disk, or streaming via the callback or connection interfaces. Some knowledge\n    of 'libcurl' is recommended; for a more-user-friendly web client see the \n    'httr2' package which builds on this package with http specific tools and logic.",
         "License": "MIT + file LICENSE",
@@ -589,18 +589,18 @@
         "Language": "en-US",
         "Config/roxygen2/version": "8.0.0",
         "NeedsCompilation": "yes",
-        "Packaged": "2026-10-14 10:10:35 UTC; jeroen",
+        "Packaged": "2026-11-23 18:28:09 UTC; jeroen",
         "Author": "Jeroen Ooms [aut, cre] (ORCID: <https://orcid.org/0000-0002-4035-0289>),\n  Hadley Wickham [ctb],\n  Posit Software, PBC [cph]",
         "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
         "Repository": "RSPM",
-        "Date/Publication": "2026-10-14 12:12:13 UTC",
-        "Built": "R 4.6.0; x86_64-pc-linux-gnu; 2026-10-15 04:19:50 UTC; unix",
+        "Date/Publication": "2026-11-23 21:50:08 UTC",
+        "Built": "R 4.6.0; x86_64-pc-linux-gnu; 2026-11-24 06:30:49 UTC; unix",
         "RemoteType": "standard",
         "RemotePkgRef": "curl",
         "RemoteRef": "curl",
         "RemoteRepos": "https://packagemanager.posit.co/cran/__linux__/resolute/latest",
         "RemotePkgPlatform": "x86_64-pc-linux-gnu-ubuntu-26.04",
-        "RemoteSha": "8.1.0"
+        "RemoteSha": "8.2.0"
       }
     },
     "data.table": {
@@ -3042,7 +3042,7 @@
       "checksum": "dff36efa3f2d0c7db8f109c86602f7bb"
     },
     "data/rlgb.rds": {
-      "checksum": "a9857e2ecfffe9806df66a1cda8d8be1"
+      "checksum": "c51d29c85cb57fa52322770cf28f4513"
     }
   },
   "users": null
